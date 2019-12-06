@@ -4,22 +4,32 @@ import numpy as np
 class TopConfig:
     def __init__(self):
         # select functions to be executed, including generating data(GenData), training(Train), and simulation(Simulation)
+        # 默认的模式就是 训练 模式
         self.function = 'Train'
 
         # code
+        # [n,k]线性分组码，k是实际码字长度，n是实际码长+监督码长
         self.N_code = 576
         self.K_code = 432
+        # 组成格式字符串---生成矩阵和校验矩阵的路径
+        # 31*432
         self.file_G = format('./LDPC_matrix/LDPC_gen_mat_%d_%d.txt' % (self.N_code, self.K_code))
+        # 14*144
         self.file_H = format('./LDPC_matrix/LDPC_chk_mat_%d_%d.txt' % (self.N_code, self.K_code))
 
         # noise information
+        # 噪声马元的长度
         self.blk_len = self.N_code
+        # 有色噪声的相关系数
         self.corr_para = 0.5  # correlation parameters of the colored noise
+        # 
         self.corr_para_simu = self.corr_para  # correlation parameters for simulation. this should be equal to corr_para. If not, it is used to test the model robustness.
+        # 噪声
         self.cov_1_2_file = format('./Noise/cov_1_2_corr_para%.2f.dat'% self.corr_para)
         self.cov_1_2_file_simu = self.cov_1_2_file
 
         # BP decoding
+
         self.BP_iter_nums_gen_data = np.array([5])     # the number of BP iterations
         self.BP_iter_nums_simu = np.array([5,5])
 

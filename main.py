@@ -19,7 +19,10 @@ import ConvNet
 import DataIO
 
 # address configurations
+# 创建一个配置对象
 top_config = Configrations.TopConfig()
+
+# 分析输入参数
 top_config.parse_cmd_line(sys.argv)
 
 train_config = Configrations.TrainingConfig(top_config)
@@ -36,6 +39,7 @@ if top_config.function == 'GenData':
     ibd.generate_noise_samples(code, top_config, net_config, train_config, top_config.BP_iter_nums_gen_data,
                                                   top_config.currently_trained_net_id, 'Test', noise_io, top_config.model_id)
 elif top_config.function == 'Train':
+    # 获取网络id?
     net_id = top_config.currently_trained_net_id
     conv_net = ConvNet.ConvNet(net_config, train_config, net_id)
     conv_net.train_network(top_config.model_id)

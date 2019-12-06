@@ -7,11 +7,11 @@ class GetMatrixForBPNet:
     def __init__(self, test_H, loc_nzero_row):
         print("Construct the Matrics H class!\n")
         self.H = test_H
-        self.m, self.n = np.shape(test_H)
-        self.H_sum_line = np.sum(self.H, axis=0)
-        self.H_sum_row = np.sum(self.H, axis=1)
-        self.loc_nzero_row = loc_nzero_row
-        self.num_all_edges = np.size(self.loc_nzero_row[1, :])
+        self.m, self.n = np.shape(test_H) # shape of check matrix ,m : row, n : col, n equal to the length of the code
+        self.H_sum_line = np.sum(self.H, axis=0)  # an array, elements are sum of each col of the martix 
+        self.H_sum_row = np.sum(self.H, axis=1) # an array, elements are sum of each row of the martix
+        self.loc_nzero_row = loc_nzero_row # the index array of nor-zero element of check metrix
+        self.num_all_edges = np.size(self.loc_nzero_row[1, :]) # the size of no-zero elements in echeck matrix, which equal to the number of the edges of tanner graph 
 
         self.loc_nzero1 = self.loc_nzero_row[1, :] * self.n + self.loc_nzero_row[0, :]
         self.loc_nzero2 = np.sort(self.loc_nzero1)
@@ -50,10 +50,12 @@ class GetMatrixForBPNet:
     def get_Matrix_CV(self):
 
         H_sum_by_C_to_V = np.zeros([self.num_all_edges, self.num_all_edges], dtype=np.float32)
-
+        # a natrix width and height are both num_all_edges
         Map_line_to_row = np.zeros([self.num_all_edges, 1])
+        # a line of the H_sum_by_C_to_V
 
         for i in range(0, self.num_all_edges):
+            # compare and return all index that self.loc_nzero4[index] == self.loc_nzero5[i]
             Map_line_to_row[i] = np.where(self.loc_nzero4 == self.loc_nzero5[i])
 
         map_H_line_to_row = np.zeros([self.num_all_edges, self.num_all_edges], dtype=np.float32)
@@ -73,11 +75,19 @@ class GetMatrixForBPNet:
 
 
 class BP_NetDecoder:
+    '''
+
+    '''
     def __init__(self, H, batch_size):
-        _, self.v_node_num = np.shape(H)
-        ii, jj = np.nonzero(H)
-        loc_nzero_row = np.array([ii, jj])
-        self.num_all_edges = np.size(loc_nzero_row[1, :])
+        '''
+        llr : 对数似然比log-likelihood-ratios
+        H ：码长 ？
+
+        '''
+        _, self.v_node_num = np.shape(H) # 变量节点的数量
+        ii, jj = np.nonzero(H)  # the row index  and col index of the nozero elements in check matrix 
+        loc_nzero_row = np.array([ii, jj]) # combinate the ii and jj into a two demension array, which represent the no-zero index
+        self.num_all_edges = np.size(loc_nzero_row[1, :]) # the size of the col 
         gm1 = GetMatrixForBPNet(H[:, :], loc_nzero_row)
         self.H_sumC_to_V = gm1.get_Matrix_CV()
         self.H_x_to_xe0, self.H_sumV_to_C, self.H_xe_v_sumc_to_y = gm1.get_Matrix_VC()
@@ -118,8 +128,13 @@ class BP_NetDecoder:
         return xe_v_sumc, xe_c_sumv
 
     def build_network(self): # build the network for one BP iteration
+        '''
+        create bp encode network
+        '''
         # BP initialization
         llr_into_bp_net = tf.Variable(np.ones([self.v_node_num, self.batch_size], dtype=np.float32))
+        # llr_into_bp_net initialize with shape [variable nodes. batch_size]
+
         xe_0 = tf.matmul(self.H_x_to_xe0, llr_into_bp_net)
         xe_v2c_pre_iter = tf.Variable(np.ones([self.num_all_edges, self.batch_size], dtype=np.float32)) # the v->c messages of the previous iteration
         xe_v2c_pre_iter_assign = xe_v2c_pre_iter.assign(xe_0)

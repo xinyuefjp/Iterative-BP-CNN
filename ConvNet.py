@@ -20,12 +20,15 @@ class ConvNet:
         self.net_id = net_id
         self.res_noise_power_dict = {}
         self.res_noise_pdf_dict = {}
-
+    
+    # 构建神经网络
     def build_network(self, built_for_training=False):  # build a network similar with SRCNN, a fully-convolutional netowrk for channel noise estimation
         # built_for_train: denote whether the network is build for training or test. If for test, xavier initialization is not needed since the model will be loaded later.
+        # 构建一个float矩阵占位符, self.net_config.feature_length=576
         x_in = tf.placeholder(tf.float32, [None, self.net_config.feature_length])  # input data
+        # 变成了一个四维的，为什么时四维的呢
         x_in_reshape = tf.reshape(x_in, (-1, self.net_config.feature_length, 1, 1))
-        layer_output = {}
+        layer_output = {} 
 
         for layer in range(self.net_config.total_layers):  # construct layers
             self.conv_filter_name[layer] = format("conv_layer%d" % (layer))
@@ -39,7 +42,7 @@ class ConvNet:
                 in_channels = self.net_config.feature_map_nums[layer - 1]
             out_channels = self.net_config.feature_map_nums[layer]
 
-            if built_for_training:
+            if built_for_training: # build_for_traning=False default
                 # xavier initialization for training
                 self.conv_filter[layer] = tf.get_variable(name=self.conv_filter_name[layer], shape=[self.net_config.filter_sizes[layer], 1, in_channels, out_channels],
                                                           dtype=tf.float32, initializer=tf.contrib.layers.xavier_initializer())
@@ -49,7 +52,7 @@ class ConvNet:
                 self.best_bias[layer] = tf.Variable(tf.ones([out_channels], tf.float32), dtype=tf.float32)
                 self.assign_best_conv_filter[layer] = self.best_conv_filter[layer].assign(self.conv_filter[layer])
                 self.assign_best_bias[layer] = self.best_bias[layer].assign(self.bias[layer])
-            else:
+            else: # create the layers !!
                 # just build tensors for testing and their values will be loaded later.
                 self.conv_filter[layer] = tf.Variable(tf.random_normal([self.net_config.filter_sizes[layer], 1, in_channels, out_channels], 0, 1, tf.float32), dtype=tf.float32,
                                                       name=self.conv_filter_name[layer])
@@ -78,6 +81,8 @@ class ConvNet:
             model_id_str = model_id_str[1:(len(model_id_str)-1)]
             model_folder = format("%snetid%d_model%s" % (self.net_config.model_folder, self.net_id, model_id_str))
             restore_model_name = format("%s/model.ckpt" % model_folder)
+            # simplify the path
+           # restore_model_name = "model/model.ckpt"
             saver_restore = tf.train.Saver(save_dict)
             saver_restore.restore(sess_in, restore_model_name)
             print("Restore the first %d layers.\n" % restore_layers_in)
@@ -155,6 +160,7 @@ class ConvNet:
         return norm_test
 
     def train_network(self, model_id):
+        # 记录起始时间
         start = datetime.datetime.now()
         dataio = DataIO.TrainingDataIO(self.train_config.training_feature_file, self.train_config.training_label_file,
                                        self.train_config.training_sample_num, self.net_config.feature_length,

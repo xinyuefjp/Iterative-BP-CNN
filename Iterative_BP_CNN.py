@@ -211,6 +211,7 @@ def generate_noise_samples(linear_code, top_config, net_config, train_config, bp
     conv_net = {}
     denoise_net_in = {}
     denoise_net_out = {}
+    # net_id_data_for在GenData下是0
     for net_id in range(net_id_data_for):
         conv_net[net_id] = ConvNet.ConvNet(net_config, None, net_id)
         denoise_net_in[net_id], denoise_net_out[net_id] = conv_net[net_id].build_network()
@@ -221,6 +222,7 @@ def generate_noise_samples(linear_code, top_config, net_config, train_config, bp
     sess.run(init)
 
     # restore cnn networks before the target CNN
+    # net_id_data_for在GenData下是0
     for net_id in range(net_id_data_for):
         conv_net[net_id].restore_network_with_model_id(sess, net_config.total_layers, model_id[0:(net_id+1)])
 
@@ -237,13 +239,15 @@ def generate_noise_samples(linear_code, top_config, net_config, train_config, bp
         exit(0)
 
     # generating data
+    # GenData的total_batches是1428
     for ik in range(0, total_batches):  # number of batches
+       # SNRset_for_generate_training_data在[0,3]以0.5步进(信噪比)
         for SNR in SNRset_for_generate_training_data:
             x_bits, _, _, channel_noise, y_receive, LLR = lbc.encode_and_transmission(G_matrix, SNR, batch_size_each_SNR, noise_io)
-
+            # GenData下net_id_data_for是0
             for iter in range(0, net_id_data_for + 1):
                 u_BP_decoded = bp_decoder.decode(LLR.astype(np.float32), bp_iter_num[iter])
-
+  
                 if iter != net_id_data_for:
                     if top_config.update_llr_with_epdf:
                         prob = conv_net[iter].get_res_noise_pdf(model_id).get(np.float32(SNR))
@@ -333,15 +337,18 @@ def analyze_residual_noise(linear_code, top_config, net_config, simutimes, batch
             for iter in range(0, net_id_tested+1):
                 # BP decoding
                 u_BP_decoded = bp_decoder.decode(LLR.astype(np.float32), bp_iter_num[iter])
-                noise_before_cnn = y_receive - (u_BP_decoded * (-2) + 1)
+                noise_before_cnn = y_receive - (u_BP_decoded * (-2) + 1) # do bpsk for u_BP_decoded, *(-2) + 1
+                # u means the code after encode, u_BP_decoded means code after BP_decoded 
                 noise_after_cnn = sess.run(denoise_net_out[iter], feed_dict={denoise_net_in[iter]: noise_before_cnn})
                 s_mod_plus_res_noise = y_receive - noise_after_cnn
+                # s_mod_plus_res_noise means the demodulated signal plus the residual noise, which equal to the really wanted receive signal
                 if iter < net_id_tested:  # calculate the LLR for next BP decoding
                     if top_config.update_llr_with_epdf:
                         prob_tmp = conv_net[iter].get_res_noise_pdf(model_id).get(np.float32(SNR))
                         LLR = calc_LLR_epdf(prob_tmp, s_mod_plus_res_noise)
                     else:
                         res_noise_power = conv_net[iter].get_res_noise_power(model_id).get(np.float32(SNR))
+                        # calculate the res_noise_power
                         LLR = s_mod_plus_res_noise * 2.0 / res_noise_power
             if top_config.update_llr_with_epdf:
                 prob = stat_prob(s_mod_plus_res_noise - s_mod, prob)
